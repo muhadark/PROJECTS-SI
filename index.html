@@ -139,7 +139,7 @@ async function notionQuery(dbid, cursor = null) {
   });
   if (!res.ok) {
     const err = await res.json().catch(()=>({}));
-    throw new Error(err.error || err.message || \`Erreur \${res.status}\`);
+    throw new Error(err.error || err.message || `Erreur ${res.status}`);
   }
   return res.json();
 }
@@ -205,7 +205,7 @@ function parsePages(pages) {
 // ═══ RENDER ═══
 function statusBadge(s) {
   const m = {'Terminé':'bg','Achevé':'bg','Presque Terminé':'bb','Presque terminé':'bb','En cours':'by','En Pause':'bk','En pause':'bk'};
-  return \`<span class="badge \${m[s]||'bk'}">\${s||'—'}</span>\`;
+  return `<span class="badge ${m[s]||'bk'}">${s||'—'}</span>`;
 }
 function months(a,b){ return a&&b ? Math.round((new Date(b)-new Date(a))/(86400000*30)) : null; }
 function fmt(d){ return d ? d.slice(0,7) : '?'; }
@@ -224,12 +224,12 @@ function renderDashboard(projects) {
   const noDates  = projects.filter(p=>!p.start&&!p.end).length;
 
   // KPIs
-  document.getElementById('kpis').innerHTML = \`
-    <div class="kcard"><div class="klabel">Total projets</div><div class="kval">\${total}</div><div class="ksub">base PROJETS SI</div></div>
-    <div class="kcard"><div class="klabel">En cours / Presque terminé</div><div class="kval" style="color:#185fa5;">\${active}</div><div class="ksub">\${Math.round(active/total*100)}% du portefeuille</div></div>
-    <div class="kcard"><div class="klabel">Terminés / Achevés</div><div class="kval" style="color:#3b6d11;">\${done}</div><div class="ksub">\${Math.round(done/total*100)}% complétés</div></div>
-    <div class="kcard"><div class="klabel">Retards / En pause</div><div class="kval" style="color:#a32d2d;">\${late+paused}</div><div class="ksub">nécessitent une action</div></div>
-  \`;
+  document.getElementById('kpis').innerHTML = `
+    <div class="kcard"><div class="klabel">Total projets</div><div class="kval">${total}</div><div class="ksub">base PROJETS SI</div></div>
+    <div class="kcard"><div class="klabel">En cours / Presque terminé</div><div class="kval" style="color:#185fa5;">${active}</div><div class="ksub">${Math.round(active/total*100)}% du portefeuille</div></div>
+    <div class="kcard"><div class="klabel">Terminés / Achevés</div><div class="kval" style="color:#3b6d11;">${done}</div><div class="ksub">${Math.round(done/total*100)}% complétés</div></div>
+    <div class="kcard"><div class="klabel">Retards / En pause</div><div class="kval" style="color:#a32d2d;">${late+paused}</div><div class="ksub">nécessitent une action</div></div>
+  `;
 
   // Status counts
   const sCounts = {};
@@ -242,17 +242,17 @@ function renderDashboard(projects) {
   const oEntries = Object.entries(oCounts).sort((a,b)=>b[1]-a[1]);
 
   // Charts row
-  document.getElementById('charts-row').innerHTML = \`
+  document.getElementById('charts-row').innerHTML = `
     <div class="card">
       <div class="ctitle">Répartition par statut</div>
-      <div class="leg">\${Object.keys(sCounts).map((k,i)=>\`<div class="legg"><div class="legdot" style="background:\${sColors[i%sColors.length]};"></div>\${k} (\${sCounts[k]})</div>\`).join('')}</div>
+      <div class="leg">${Object.keys(sCounts).map((k,i)=>`<div class="legg"><div class="legdot" style="background:${sColors[i%sColors.length]};"></div>${k} (${sCounts[k]})</div>`).join('')}</div>
       <div style="position:relative;height:180px;"><canvas id="cS" aria-label="Répartition par statut"></canvas></div>
     </div>
     <div class="card">
       <div class="ctitle">Projets par propriétaire</div>
-      <div style="position:relative;height:\${Math.max(180,oEntries.length*36+50)}px;"><canvas id="cO" aria-label="Projets par propriétaire"></canvas></div>
+      <div style="position:relative;height:${Math.max(180,oEntries.length*36+50)}px;"><canvas id="cO" aria-label="Projets par propriétaire"></canvas></div>
     </div>
-  \`;
+  `;
 
   charts.s = new Chart(document.getElementById('cS'),{
     type:'doughnut',
@@ -270,59 +270,59 @@ function renderDashboard(projects) {
     .map(p=>({name:p.name.length>24?p.name.slice(0,24)+'…':p.name, m:months(p.start,p.end), late:p.isLate}))
     .sort((a,b)=>b.m-a.m).slice(0,10);
 
-  document.getElementById('dur-chart').innerHTML = withDur.length>0 ? \`
+  document.getElementById('dur-chart').innerHTML = withDur.length>0 ? `
     <div class="ctitle">Durée des projets (mois) <span style="font-size:10px;font-weight:400;color:#888;">rouge = dépassé</span></div>
-    <div style="position:relative;height:\${Math.max(180,withDur.length*28+60)}px;"><canvas id="cD" aria-label="Durée des projets en mois"></canvas></div>
-  \` : \`<div style="text-align:center;padding:20px;color:#aaa;font-size:12px;">Aucun projet avec dates renseignées</div>\`;
+    <div style="position:relative;height:${Math.max(180,withDur.length*28+60)}px;"><canvas id="cD" aria-label="Durée des projets en mois"></canvas></div>
+  ` : `<div style="text-align:center;padding:20px;color:#aaa;font-size:12px;">Aucun projet avec dates renseignées</div>`;
 
   if (withDur.length>0) {
     charts.d = new Chart(document.getElementById('cD'),{
       type:'bar',
       data:{labels:withDur.map(p=>p.name),datasets:[{data:withDur.map(p=>p.m),backgroundColor:withDur.map(p=>p.late?'#E24B4A':'#378ADD'),borderWidth:0,borderRadius:3}]},
-      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>\` \${c.raw} mois\`}}},scales:{x:{grid:{display:false},ticks:{callback:v=>v+'m'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw} mois`}}},scales:{x:{grid:{display:false},ticks:{callback:v=>v+'m'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
     });
   }
 
   // Alerts
   const lateProjs  = projects.filter(p=>p.isLate).sort((a,b)=>b.daysLate-a.daysLate);
   const pausedProjs= projects.filter(p=>p.statut?.toLowerCase().includes('pause'));
-  document.getElementById('alerts-section').innerHTML = (lateProjs.length||pausedProjs.length||noDates) ? \`
+  document.getElementById('alerts-section').innerHTML = (lateProjs.length||pausedProjs.length||noDates) ? `
     <div class="card" style="margin-bottom:12px;">
       <div class="ctitle" style="margin-bottom:10px;">🚨 Alertes</div>
-      \${lateProjs.map(p=>\`<div class="alert d"><div><div class="at">\${p.name}</div><div class="as">Fin prévue : \${p.end} — \${p.statut} — \${p.owner} — <strong>+\${p.daysLate} jours de retard</strong></div></div></div>\`).join('')}
-      \${pausedProjs.map(p=>\`<div class="alert w"><div><div class="at">\${p.name} — En pause</div><div class="as">\${fmt(p.start)} → \${fmt(p.end)} — \${p.owner}</div></div></div>\`).join('')}
-      \${noDates>0?\`<div class="alert i"><div><div class="at">\${noDates} projet(s) sans dates</div><div class="as">Suivi des délais impossible sans dates de début/fin</div></div></div>\`:\`\`}
-    </div>\` : '';
+      ${lateProjs.map(p=>`<div class="alert d"><div><div class="at">${p.name}</div><div class="as">Fin prévue : ${p.end} — ${p.statut} — ${p.owner} — <strong>+${p.daysLate} jours de retard</strong></div></div></div>`).join('')}
+      ${pausedProjs.map(p=>`<div class="alert w"><div><div class="at">${p.name} — En pause</div><div class="as">${fmt(p.start)} → ${fmt(p.end)} — ${p.owner}</div></div></div>`).join('')}
+      ${noDates>0?`<div class="alert i"><div><div class="at">${noDates} projet(s) sans dates</div><div class="as">Suivi des délais impossible sans dates de début/fin</div></div></div>`:''}
+    </div>` : '';
 
   // Table grouped by owner
   const grouped = {};
   projects.forEach(p=>{ const o=p.owner||'Non assigné'; if(!grouped[o])grouped[o]=[]; grouped[o].push(p); });
-  const tbody = Object.entries(grouped).sort().map(([owner,projs])=>\`
-    <tr class="ohead"><td colspan="6">\${owner} (\${projs.length})</td></tr>
-    \${projs.map(p=>\`<tr>
-      <td style="font-weight:500;font-size:11px;">\${p.name.length>30?p.name.slice(0,30)+'…':p.name}\${p.isLate?\` <span class="badge br">Retard</span>\`:\`\`}</td>
-      <td>\${statusBadge(p.statut)}</td>
-      <td>\${p.priorite?\`<span class="badge br">\${p.priorite}</span>\`:'<span style="color:#aaa;">—</span>'}</td>
-      <td style="font-size:10px;color:#888;">\${p.start?fmt(p.start):'?'} → \${p.end?fmt(p.end):'?'}</td>
-      <td style="color:#888;">\${p.tasks!=null?p.tasks:'—'}</td>
-      <td style="font-size:10px;color:#888;">\${p.porteur}</td>
-    </tr>\`).join('')}
-  \`).join('');
+  const tbody = Object.entries(grouped).sort().map(([owner,projs])=>`
+    <tr class="ohead"><td colspan="6">${owner} (${projs.length})</td></tr>
+    ${projs.map(p=>`<tr>
+      <td style="font-weight:500;font-size:11px;">${p.name.length>30?p.name.slice(0,30)+'…':p.name}${p.isLate?` <span class="badge br">Retard</span>`:''}</td>
+      <td>${statusBadge(p.statut)}</td>
+      <td>${p.priorite?`<span class="badge br">${p.priorite}</span>`:'<span style="color:#aaa;">—</span>'}</td>
+      <td style="font-size:10px;color:#888;">${p.start?fmt(p.start):'?'} → ${p.end?fmt(p.end):'?'}</td>
+      <td style="color:#888;">${p.tasks!=null?p.tasks:'—'}</td>
+      <td style="font-size:10px;color:#888;">${p.porteur}</td>
+    </tr>`).join('')}
+  `).join('');
 
-  document.getElementById('table-section').innerHTML = \`
+  document.getElementById('table-section').innerHTML = `
     <div class="tcard">
-      <div class="ctitle" style="margin-bottom:10px;">Détail par propriétaire — \${total} projets</div>
+      <div class="ctitle" style="margin-bottom:10px;">Détail par propriétaire — ${total} projets</div>
       <table>
         <thead><tr>
           <th style="width:28%;">Projet</th><th style="width:14%;">Statut</th><th style="width:9%;">Priorité</th>
           <th style="width:17%;">Période</th><th style="width:7%;">Tâches</th><th style="width:25%;">Porteur</th>
         </tr></thead>
-        <tbody>\${tbody}</tbody>
+        <tbody>${tbody}</tbody>
       </table>
-    </div>\`;
+    </div>`;
 
   document.getElementById('footer').textContent =
-    \`Données Notion — actualisées le \${new Date().toLocaleString('fr-FR')} • API Vercel Backend\`;
+    `Données Notion — actualisées le ${new Date().toLocaleString('fr-FR')} • API Vercel Backend`;
 }
 
 // ═══ LOAD ═══
@@ -338,19 +338,19 @@ async function loadData() {
 
   try {
     const pages   = await fetchAllPages(dbid);
-    setStatus('loading',\`\${pages.length} projets récupérés — analyse…\`);
+    setStatus('loading',`${pages.length} projets récupérés — analyse…`);
     const projects = parsePages(pages);
     renderDashboard(projects);
     document.getElementById('last-upd').textContent =
-      \`Mis à jour le \${new Date().toLocaleString('fr-FR')} • \${projects.length} projets\`;
-    setStatus('ok', \`\${projects.length} projets chargés depuis Notion — API directe ✓\`);
+      `Mis à jour le ${new Date().toLocaleString('fr-FR')} • ${projects.length} projets`;
+    setStatus('ok', `${projects.length} projets chargés depuis Notion — API directe ✓`);
   } catch(err) {
     console.error(err);
     setStatus('err','Erreur : ' + err.message);
     if (err.message.includes('401')||err.message.includes('403')||err.message.includes('Token invalide')) {
       document.getElementById('alerts-section').innerHTML =
-        \`<div class="alert d" style="margin-bottom:12px;"><div><div class="at">Erreur d'authentification</div>
-        <div class="as">Token invalide ou accès refusé. Vérifiez vos variables d'environnement Vercel.</div></div></div>\`;
+        `<div class="alert d" style="margin-bottom:12px;"><div><div class="at">Erreur d'authentification</div>
+        <div class="as">Token invalide ou accès refusé. Vérifiez vos variables d'environnement Vercel.</div></div></div>`;
     }
   } finally {
     btn.disabled = false;
