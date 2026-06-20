@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PROJETS SI — Live Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f7f7f5;color:#1a1a18;min-height:100vh}
+.shell{max-width:980px;margin:0 auto;padding:2rem 1.5rem 4rem}
+
+/* Dashboard */
+#dashboard{display:block}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:1rem 0 .75rem}
+.htitle{font-size:18px;font-weight:500}
+.hsub{font-size:12px;color:#888;margin-top:3px}
+.hdr-actions{display:flex;gap:8px;align-items:center}
+.btn-refresh{display:flex;align-items:center;gap:6px;font-size:12px;padding:8px 16px;border:1.5px solid #ddd;border-radius:8px;background:white;cursor:pointer;color:#333;transition:all .15s}
+.btn-refresh:hover{background:#f0f0ee;border-color:#bbb}
+.btn-refresh:disabled{opacity:.5;cursor:not-allowed}
+.spin{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.sbar{display:flex;align-items:center;gap:8px;font-size:11px;color:#888;margin-bottom:14px;padding:7px 10px;background:white;border-radius:8px;border:0.5px solid #e5e5e2}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#ccc}
+.sdot.ok{background:#27ae60}.sdot.loading{background:#f39c12;animation:pulse 1s infinite}.sdot.err{background:#e24b4a}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kcard{background:#f0f0ee;border-radius:10px;padding:13px 15px}
+.klabel{font-size:11px;color:#888;margin-bottom:3px}
+.kval{font-size:26px;font-weight:500;line-height:1.1}
+.ksub{font-size:10px;color:#aaa;margin-top:3px}
+
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:white;border:0.5px solid #e5e5e2;border-radius:12px;padding:14px}
+.ctitle{font-size:12px;font-weight:500;margin-bottom:10px}
+
+.alert{display:flex;gap:8px;padding:8px 10px;margin-bottom:6px;border-radius:0 8px 8px 0}
+.alert.d{background:#fcebeb;border-left:3px solid #e24b4a}
+.alert.w{background:#faeeda;border-left:3px solid #ef9f27}
+.alert.i{background:#e6f1fb;border-left:3px solid #378add}
+.at{font-size:11px;font-weight:500}
+.alert.d .at{color:#a32d2d}.alert.w .at{color:#854f0b}.alert.i .at{color:#185fa5}
+.as{font-size:10px;color:#888;margin-top:1px}
+
+.tcard{background:white;border:0.5px solid #e5e5e2;border-radius:12px;padding:14px;margin-bottom:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;font-size:10px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;padding:0 6px 7px 0;border-bottom:0.5px solid #e5e5e2}
+td{padding:7px 6px 7px 0;border-bottom:0.5px solid #e5e5e2;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.ohead td{font-size:10px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.05em;padding:10px 0 3px;border-bottom:none}
+.badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;white-space:nowrap}
+.bg{background:#eaf3de;color:#3b6d11}.by{background:#faeeda;color:#854f0b}
+.br{background:#fcebeb;color:#a32d2d}.bb{background:#e6f1fb;color:#185fa5}.bk{background:#f1efe8;color:#5f5e5a}
+
+.footer{text-align:center;font-size:11px;color:#aaa;padding:12px 0 2px}
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.legg{display:flex;align-items:center;gap:4px;font-size:10px;color:#888}
+.legdot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+.skel{background:#f0f0ee;border-radius:6px;animation:shimmer 1.2s infinite}
+@keyframes shimmer{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
+
+@media(max-width:600px){
+  .kgrid{grid-template-columns:1fr 1fr}
+  .crow{grid-template-columns:1fr}
+  .hdr{flex-direction:column;gap:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ DASHBOARD ════════ -->
+<div id="dashboard">
+<div class="shell">
+
+  <div class="hdr">
+    <div>
+      <div class="htitle">📊 Rapport PROJETS SI</div>
+      <div class="hsub" id="last-upd">Chargement…</div>
+    </div>
+    <div class="hdr-actions">
+      <button class="btn-refresh" id="refresh-btn" onclick="loadData()">
+        <span id="ricon">↻</span> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <div class="sbar">
+    <div class="sdot loading" id="sdot"></div>
+    <span id="stxt">Connexion à l'API Notion…</span>
+  </div>
+
+  <div id="kpis" class="kgrid">
+    <div class="skel" style="height:72px;border-radius:10px;"></div>
+    <div class="skel" style="height:72px;border-radius:10px;"></div>
+    <div class="skel" style="height:72px;border-radius:10px;"></div>
+    <div class="skel" style="height:72px;border-radius:10px;"></div>
+  </div>
+
+  <div id="charts-row" class="crow">
+    <div class="card"><div class="skel" style="height:220px;border-radius:8px;"></div></div>
+    <div class="card"><div class="skel" style="height:220px;border-radius:8px;"></div></div>
+  </div>
+
+  <div id="dur-chart" class="card" style="margin-bottom:12px;">
+    <div class="skel" style="height:200px;border-radius:8px;"></div>
+  </div>
+
+  <div id="alerts-section"></div>
+  <div id="table-section"></div>
+  <div class="footer" id="footer"></div>
+
+</div>
+</div>
+
+<script>
+// ═══ CONFIG ═══
+const DB_ID_DEFAULT = '5fdc7b5b-fbbf-45ca-94f7-0c10d1d69f77';
+let charts = {};
+
+// ═══ SETUP ═══
+window.onload = () => {
+  loadData();
+};
+
+// ═══ API ═══
+async function notionQuery(dbid, cursor = null) {
+  const body = { dbid };
+  if (cursor) body.cursor = cursor;
+  const res = await fetch('/api/notion', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.error || err.message || \`Erreur \${res.status}\`);
+  }
+  return res.json();
+}
+
+async function fetchAllPages(dbid) {
+  let all = [], cursor = null, hasMore = true;
+  while (hasMore) {
+    const data = await notionQuery(dbid, cursor);
+    all = all.concat(data.results || []);
+    hasMore = data.has_more;
+    cursor = data.next_cursor;
+  }
+  return all;
+}
+
+// ═══ PARSE ═══
+function parsePages(pages) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return pages.map(p => {
+    const props = p.properties || {};
+    const get = (keys) => {
+      for (const k of keys) if (props[k]) return props[k];
+      return null;
+    };
+
+    const titleProp = get(['Nom du projet','Name','title','Titre']);
+    const name = titleProp?.title?.[0]?.plain_text || titleProp?.rich_text?.[0]?.plain_text || 'Sans nom';
+
+    const ownerProp = get(['Propriétaire','Proprietaire','Owner']);
+    const owner = ownerProp?.rich_text?.[0]?.plain_text || ownerProp?.select?.name || '—';
+
+    const statusProp = get(['État','Etat','Status','Statut']);
+    const statut = statusProp?.select?.name || statusProp?.status?.name || '—';
+
+    const prioProp = get(['Priorité','Priorite','Priority']);
+    const priorite = prioProp?.select?.name || null;
+
+    const datesProp = get(['Dates','Date','Période']);
+    const start = datesProp?.date?.start || null;
+    const end   = datesProp?.date?.end   || null;
+
+    const tasksProp = get(['Nombre de tâches','Tasks','Tâches','TÂCHES']);
+    const tasks = tasksProp?.number ?? (tasksProp?.relation ? tasksProp.relation.length : null);
+
+    const achevProp = get(['Achèvement','Achevement','Progress','Avancement']);
+    const achevement = achevProp?.number ?? null;
+
+    const porteurProp = get(['Porteur Projet','Porteur','Owner project']);
+    const porteur = porteurProp?.rich_text?.[0]?.plain_text || porteurProp?.select?.name || '—';
+
+    let isLate = false;
+    if (end) {
+      const endDate = new Date(end); endDate.setHours(0,0,0,0);
+      const done = ['Terminé','Achevé','Terminé ','Achevé '];
+      if (endDate < today && !done.includes(statut.trim())) isLate = true;
+    }
+    const daysLate = isLate && end ? Math.round((today - new Date(end)) / 86400000) : 0;
+
+    return { name, owner, statut: statut.trim(), priorite, start, end, tasks, achevement, porteur, isLate, daysLate, id: p.id };
+  });
+}
+
+// ═══ RENDER ═══
+function statusBadge(s) {
+  const m = {'Terminé':'bg','Achevé':'bg','Presque Terminé':'bb','Presque terminé':'bb','En cours':'by','En Pause':'bk','En pause':'bk'};
+  return \`<span class="badge \${m[s]||'bk'}">\${s||'—'}</span>\`;
+}
+function months(a,b){ return a&&b ? Math.round((new Date(b)-new Date(a))/(86400000*30)) : null; }
+function fmt(d){ return d ? d.slice(0,7) : '?'; }
+
+function destroyCharts(){ Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={}; }
+
+function renderDashboard(projects) {
+  destroyCharts();
+  const today = new Date().toISOString().slice(0,10);
+
+  const total    = projects.length;
+  const done     = projects.filter(p=>['Terminé','Achevé'].includes(p.statut)).length;
+  const active   = projects.filter(p=>['En cours','Presque Terminé','Presque terminé'].includes(p.statut)).length;
+  const late     = projects.filter(p=>p.isLate).length;
+  const paused   = projects.filter(p=>p.statut?.toLowerCase().includes('pause')).length;
+  const noDates  = projects.filter(p=>!p.start&&!p.end).length;
+
+  // KPIs
+  document.getElementById('kpis').innerHTML = \`
+    <div class="kcard"><div class="klabel">Total projets</div><div class="kval">\${total}</div><div class="ksub">base PROJETS SI</div></div>
+    <div class="kcard"><div class="klabel">En cours / Presque terminé</div><div class="kval" style="color:#185fa5;">\${active}</div><div class="ksub">\${Math.round(active/total*100)}% du portefeuille</div></div>
+    <div class="kcard"><div class="klabel">Terminés / Achevés</div><div class="kval" style="color:#3b6d11;">\${done}</div><div class="ksub">\${Math.round(done/total*100)}% complétés</div></div>
+    <div class="kcard"><div class="klabel">Retards / En pause</div><div class="kval" style="color:#a32d2d;">\${late+paused}</div><div class="ksub">nécessitent une action</div></div>
+  \`;
+
+  // Status counts
+  const sCounts = {};
+  projects.forEach(p=>{ sCounts[p.statut]=(sCounts[p.statut]||0)+1; });
+  const sColors = ['#378ADD','#63A520','#3B6D11','#D05A30','#888780','#D4537E','#7F77DD'];
+
+  // Owner counts
+  const oCounts = {};
+  projects.forEach(p=>{ const o=p.owner||'Non assigné'; oCounts[o]=(oCounts[o]||0)+1; });
+  const oEntries = Object.entries(oCounts).sort((a,b)=>b[1]-a[1]);
+
+  // Charts row
+  document.getElementById('charts-row').innerHTML = \`
+    <div class="card">
+      <div class="ctitle">Répartition par statut</div>
+      <div class="leg">\${Object.keys(sCounts).map((k,i)=>\`<div class="legg"><div class="legdot" style="background:\${sColors[i%sColors.length]};"></div>\${k} (\${sCounts[k]})</div>\`).join('')}</div>
+      <div style="position:relative;height:180px;"><canvas id="cS" aria-label="Répartition par statut"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Projets par propriétaire</div>
+      <div style="position:relative;height:\${Math.max(180,oEntries.length*36+50)}px;"><canvas id="cO" aria-label="Projets par propriétaire"></canvas></div>
+    </div>
+  \`;
+
+  charts.s = new Chart(document.getElementById('cS'),{
+    type:'doughnut',
+    data:{labels:Object.keys(sCounts),datasets:[{data:Object.values(sCounts),backgroundColor:sColors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}
+  });
+  charts.o = new Chart(document.getElementById('cO'),{
+    type:'bar',
+    data:{labels:oEntries.map(([k])=>k.length>22?k.slice(0,22)+'…':k),datasets:[{data:oEntries.map(([,v])=>v),backgroundColor:'#378ADD',borderWidth:0,borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{stepSize:1}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+
+  // Duration chart
+  const withDur = projects.filter(p=>p.start&&p.end)
+    .map(p=>({name:p.name.length>24?p.name.slice(0,24)+'…':p.name, m:months(p.start,p.end), late:p.isLate}))
+    .sort((a,b)=>b.m-a.m).slice(0,10);
+
+  document.getElementById('dur-chart').innerHTML = withDur.length>0 ? \`
+    <div class="ctitle">Durée des projets (mois) <span style="font-size:10px;font-weight:400;color:#888;">rouge = dépassé</span></div>
+    <div style="position:relative;height:\${Math.max(180,withDur.length*28+60)}px;"><canvas id="cD" aria-label="Durée des projets en mois"></canvas></div>
+  \` : \`<div style="text-align:center;padding:20px;color:#aaa;font-size:12px;">Aucun projet avec dates renseignées</div>\`;
+
+  if (withDur.length>0) {
+    charts.d = new Chart(document.getElementById('cD'),{
+      type:'bar',
+      data:{labels:withDur.map(p=>p.name),datasets:[{data:withDur.map(p=>p.m),backgroundColor:withDur.map(p=>p.late?'#E24B4A':'#378ADD'),borderWidth:0,borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>\` \${c.raw} mois\`}}},scales:{x:{grid:{display:false},ticks:{callback:v=>v+'m'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+    });
+  }
+
+  // Alerts
+  const lateProjs  = projects.filter(p=>p.isLate).sort((a,b)=>b.daysLate-a.daysLate);
+  const pausedProjs= projects.filter(p=>p.statut?.toLowerCase().includes('pause'));
+  document.getElementById('alerts-section').innerHTML = (lateProjs.length||pausedProjs.length||noDates) ? \`
+    <div class="card" style="margin-bottom:12px;">
+      <div class="ctitle" style="margin-bottom:10px;">🚨 Alertes</div>
+      \${lateProjs.map(p=>\`<div class="alert d"><div><div class="at">\${p.name}</div><div class="as">Fin prévue : \${p.end} — \${p.statut} — \${p.owner} — <strong>+\${p.daysLate} jours de retard</strong></div></div></div>\`).join('')}
+      \${pausedProjs.map(p=>\`<div class="alert w"><div><div class="at">\${p.name} — En pause</div><div class="as">\${fmt(p.start)} → \${fmt(p.end)} — \${p.owner}</div></div></div>\`).join('')}
+      \${noDates>0?\`<div class="alert i"><div><div class="at">\${noDates} projet(s) sans dates</div><div class="as">Suivi des délais impossible sans dates de début/fin</div></div></div>\`:\`\`}
+    </div>\` : '';
+
+  // Table grouped by owner
+  const grouped = {};
+  projects.forEach(p=>{ const o=p.owner||'Non assigné'; if(!grouped[o])grouped[o]=[]; grouped[o].push(p); });
+  const tbody = Object.entries(grouped).sort().map(([owner,projs])=>\`
+    <tr class="ohead"><td colspan="6">\${owner} (\${projs.length})</td></tr>
+    \${projs.map(p=>\`<tr>
+      <td style="font-weight:500;font-size:11px;">\${p.name.length>30?p.name.slice(0,30)+'…':p.name}\${p.isLate?\` <span class="badge br">Retard</span>\`:\`\`}</td>
+      <td>\${statusBadge(p.statut)}</td>
+      <td>\${p.priorite?\`<span class="badge br">\${p.priorite}</span>\`:'<span style="color:#aaa;">—</span>'}</td>
+      <td style="font-size:10px;color:#888;">\${p.start?fmt(p.start):'?'} → \${p.end?fmt(p.end):'?'}</td>
+      <td style="color:#888;">\${p.tasks!=null?p.tasks:'—'}</td>
+      <td style="font-size:10px;color:#888;">\${p.porteur}</td>
+    </tr>\`).join('')}
+  \`).join('');
+
+  document.getElementById('table-section').innerHTML = \`
+    <div class="tcard">
+      <div class="ctitle" style="margin-bottom:10px;">Détail par propriétaire — \${total} projets</div>
+      <table>
+        <thead><tr>
+          <th style="width:28%;">Projet</th><th style="width:14%;">Statut</th><th style="width:9%;">Priorité</th>
+          <th style="width:17%;">Période</th><th style="width:7%;">Tâches</th><th style="width:25%;">Porteur</th>
+        </tr></thead>
+        <tbody>\${tbody}</tbody>
+      </table>
+    </div>\`;
+
+  document.getElementById('footer').textContent =
+    \`Données Notion — actualisées le \${new Date().toLocaleString('fr-FR')} • API Vercel Backend\`;
+}
+
+// ═══ LOAD ═══
+async function loadData() {
+  const dbid = DB_ID_DEFAULT;
+
+  const btn = document.getElementById('refresh-btn');
+  const icon = document.getElementById('ricon');
+  btn.disabled = true;
+  icon.className = 'spin';
+
+  setStatus('loading','Connexion à l\\'API Notion…');
+
+  try {
+    const pages   = await fetchAllPages(dbid);
+    setStatus('loading',\`\${pages.length} projets récupérés — analyse…\`);
+    const projects = parsePages(pages);
+    renderDashboard(projects);
+    document.getElementById('last-upd').textContent =
+      \`Mis à jour le \${new Date().toLocaleString('fr-FR')} • \${projects.length} projets\`;
+    setStatus('ok', \`\${projects.length} projets chargés depuis Notion — API directe ✓\`);
+  } catch(err) {
+    console.error(err);
+    setStatus('err','Erreur : ' + err.message);
+    if (err.message.includes('401')||err.message.includes('403')||err.message.includes('Token invalide')) {
+      document.getElementById('alerts-section').innerHTML =
+        \`<div class="alert d" style="margin-bottom:12px;"><div><div class="at">Erreur d'authentification</div>
+        <div class="as">Token invalide ou accès refusé. Vérifiez vos variables d'environnement Vercel.</div></div></div>\`;
+    }
+  } finally {
+    btn.disabled = false;
+    icon.className = '';
+    icon.textContent = '↻';
+  }
+}
+
+function setStatus(state, msg) {
+  document.getElementById('sdot').className = 'sdot '+state;
+  document.getElementById('stxt').textContent = msg;
+}
+</script>
+</body>
+</html>
