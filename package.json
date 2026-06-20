@@ -1,0 +1,11 @@
+{
+  "name": "projets-si-live",
+  "version": "1.0.0",
+  "description": "Dashboard",
+  "scripts": {
+    "start": "node"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
